@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Cosmos Anime Rating</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    /* COSMOS DIZAYNIDAN ILHOM OLINGAN STYLE */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #0c0c12; color: #fff; overflow-x: hidden; padding-bottom: 80px; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background-color: #0c0c12; position: sticky; top: 0; z-index: 1000; height: 60px; border-bottom: 1px solid #1a1a24; }
+    .logo { display: flex; align-items: center; cursor: pointer; }
+    .logo strong { color: #cc3efd; font-size: 18px; margin-left: 5px; }
+    .logo-img { width: 32px; height: 32px; border-radius: 50%; background: #A47CF3; margin-right: 8px; overflow: hidden; }
+    .logo-img img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .content { padding: 15px; max-width: 800px; margin: 0 auto; }
+    
+    /* SEARCH BOX COSMOS STYLE */
+    .search-box { background: #161621; padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid #252533; }
+    .search-box input { width: 100%; background: #0c0c12; border: 1px solid #252533; color: #fff; padding: 12px 18px; border-radius: 12px; outline: none; font-size: 14px; margin-bottom: 12px; transition: 0.3s; }
+    .search-box input:focus { border-color: #9d5df1; }
+    .btn-search { background: linear-gradient(45deg, #9d5df1, #cc3efd); color: white; padding: 12px 20px; border-radius: 12px; cursor: pointer; border: none; font-weight: bold; width: 100%; box-shadow: 0 4px 15px rgba(157, 93, 241, 0.2); transition: 0.3s; }
+    .btn-search:active { transform: scale(0.98); opacity: 0.9; }
+
+    /* RATING CARDS */
+    .section-title { font-size: 18px; margin: 20px 0 15px; color: #9d5df1; display: flex; align-items: center; gap: 8px; font-weight: 500; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100%, 1fr)); gap: 14px; }
+    
+    .card { background: #161621; border-radius: 16px; overflow: hidden; display: flex; position: relative; border: 1px solid #1a1a24; transition: 0.3s; }
+    .card:hover { border-color: #3a3a4d; }
+    .thumb { width: 100px; height: 140px; flex-shrink: 0; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .info { padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .info h3 { font-size: 15px; margin-bottom: 4px; color: #fff; font-weight: 500; }
+    .info p { font-size: 12px; color: #6b7280; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+    
+    .vote-section { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+    
+    /* YULDUZLI OVOZ SONI STYLE */
+    .vote-count { display: flex; align-items: center; gap: 4px; color: #9d5df1; font-weight: bold; font-size: 13px; background: rgba(157, 93, 241, 0.05); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(157, 93, 241, 0.15); }
+    .vote-count img { width: 16px; height: 16px; }
+
+    .tag { background: #252533; padding: 8px 16px; border-radius: 10px; cursor: pointer; border: none; color: #9ca3af; font-size: 12px; font-weight: bold; transition: 0.2s; }
+    .tag.active { background: linear-gradient(45deg, #9d5df1, #cc3efd) !important; color: #fff !important; box-shadow: 0 4px 12px rgba(157, 93, 241, 0.2); }
+    .tag:disabled { opacity: 0.4; cursor: not-allowed; background: #1a1a24; }
+
+    /* SEARCH RESULTS */
+    #search-results { margin-top: 10px; }
+    .search-item { display: flex; align-items: center; gap: 12px; padding: 10px; background: #1a1a24; margin-bottom: 8px; border-radius: 12px; cursor: pointer; border: 1px solid transparent; transition: 0.2s; }
+    .search-item:hover { border-color: #9d5df1; background: rgba(157, 93, 241, 0.05); }
+    .search-item img { width: 45px; height: 60px; border-radius: 6px; object-fit: cover; }
+    
+    .loader { border: 3px solid #161621; border-top: 3px solid #9d5df1; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 15px auto; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    
+    
+  </div>
+  <div class="vote-count" id="user-limit" style="background: transparent; border: none;">Limit: 3/3</div>
+</header>
+
+<div class="content">
+  <div class="search-box">
+    <input type="text" id="aniInput" placeholder="Anime nomini yozing...">
+    <button class="btn-search" onclick="searchAniList()">AniList'dan qidirish</button>
+    <div class="loader" id="loader"></div>
+    <div id="search-results"></div>
+  </div>
+
+  <div class="section-title"><i class="material-icons">trending_up</i> Eng ko'p ovoz yig'ganlar</div>
+  <div class="grid" id="rating-grid"></div>
+</div>
+
+<script>
+  const DB_URL = "https://test-82a8a-default-rtdb.firebaseio.com";
+  const USER_ID = "user_" + (window.Telegram?.WebApp?.initDataUnsafe?.user?.id || "guest");
+  const TODAY = new Date().toISOString().split('T')[0];
+
+  let userState = { last_vote_date: "", voted_count: 0, voted_animes: {} };
+
+  async function searchAniList() {
+    const queryStr = document.getElementById('aniInput').value;
+    if (queryStr.length < 3) return;
+    
+    const l = document.getElementById('loader'), r = document.getElementById('search-results');
+    l.style.display = 'block'; r.innerHTML = '';
+
+    const query = `query ($search: String) { Page(perPage: 5) { media(search: $search, type: ANIME) { id title { romaji } coverImage { large } description } } }`;
+
+    try {
+      const res = await axios.post('https://graphql.anilist.co', { query: query, variables: { search: queryStr } });
+      const results = res.data.data.Page.media;
+      l.style.display = 'none';
+      
+      r.innerHTML = results.map(anime => `
+        <div class="search-item" onclick="addToRating('${anime.id}', '${anime.title.romaji.replace(/'/g, "")}', '${anime.coverImage.large}', '${anime.description ? anime.description.substring(0, 100).replace(/'/g, "") : ""}')">
+          <img src="${anime.coverImage.large}">
+          <div style="font-size:13px; font-weight:500;">${anime.title.romaji}</div>
+          <i class="material-icons" style="margin-left:auto; color:#9d5df1">add_circle</i>
+        </div>
+      `).join('');
+    } catch (e) { l.style.display = 'none'; }
+  }
+
+  async function addToRating(id, title, img, desc) {
+    const res = await axios.get(`${DB_URL}/animes/${id}.json`);
+    if (!res.data) {
+      await axios.put(`${DB_URL}/animes/${id}.json`, { name: title, image: img, description: desc, votes: 0 });
+    }
+    document.getElementById('search-results').innerHTML = "";
+    document.getElementById('aniInput').value = "";
+    loadData();
+  }
+
+  async function loadData() {
+    try {
+      const [animeRes, userRes] = await Promise.all([
+        axios.get(`${DB_URL}/animes.json`),
+        axios.get(`${DB_URL}/user_votes/${USER_ID}.json`)
+      ]);
+
+      if (userRes.data && userRes.data.last_vote_date === TODAY) {
+        userState = userRes.data;
+      } else {
+        userState = { last_vote_date: TODAY, voted_count: 0, voted_animes: {} };
+      }
+
+      document.getElementById('user-limit').innerText = `Limit: ${3 - userState.voted_count}/3`;
+
+      const grid = document.getElementById('rating-grid');
+      grid.innerHTML = "";
+      if (!animeRes.data) return;
+
+      const sorted = Object.entries(animeRes.data).sort((a, b) => (b[1].votes || 0) - (a[1].votes || 0));
+
+      sorted.forEach(([id, anime]) => {
+        const isVoted = userState.voted_animes && userState.voted_animes[id];
+        grid.innerHTML += `
+          <div class="card">
+            <div class="thumb"><img src="${anime.image}"></div>
+            <div class="info">
+              <div>
+                <h3>${anime.name}</h3>
+                <p>${anime.description || "Tavsif yo'q"}</p>
+              </div>
+              <div class="vote-section">
+                <span class="vote-count">
+                  <img src="https://cdn3.emoji.gg/emojis/6361-purple-star.gif">
+                  ${anime.votes || 0} ovoz
+                </span>
+                <button class="tag ${isVoted ? '' : 'active'}" onclick="vote('${id}')" ${isVoted || userState.voted_count >= 3 ? 'disabled' : ''}>
+                  ${isVoted ? 'Ovoz berildi' : 'Ovoz berish'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    } catch (e) { console.error(e); }
+  }
+
+  async function vote(id) {
+    if (userState.voted_count >= 3) return;
+
+    const currentVotes = (await axios.get(`${DB_URL}/animes/${id}/votes.json`)).data || 0;
+    await axios.put(`${DB_URL}/animes/${id}/votes.json`, currentVotes + 1);
+
+    userState.voted_count++;
+    if (!userState.voted_animes) userState.voted_animes = {};
+    userState.voted_animes[id] = true;
+
+    await axios.put(`${DB_URL}/user_votes/${USER_ID}.json`, userState);
+    loadData();
+  }
+
+  loadData();
+</script>
+
+</body>
+</html>

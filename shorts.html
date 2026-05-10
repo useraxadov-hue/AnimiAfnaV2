@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AniShorts</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://fast.wistia.com/assets/external/E-v1.js" async></script>
+    <style>
+        /* Borderlar va chekkalarni butunlay yo'qotish */
+        * { margin: 0; padding: 0; box-sizing: border-box; border: none !important; outline: none !important; }
+        body { background-color: #0c0c12; display: flex; justify-content: center; height: 100vh; overflow: hidden; font-family: 'Roboto', sans-serif; }
+
+        .reels-container {
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scrollbar-width: none;
+            background: #000;
+        }
+        .reels-container::-webkit-scrollbar { display: none; }
+
+        .reel {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            scroll-snap-align: start;
+            overflow: hidden;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Wistia konteynerini to'liq ekranga yoyish */
+        .wistia_responsive_padding {
+            padding: 0 !important;
+            height: 100% !important;
+            width: 100% !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+        .wistia_responsive_wrapper {
+            height: 100% !important;
+            width: 100% !important;
+            left: 0 !important;
+            position: absolute !important;
+            top: 0 !important;
+        }
+        .wistia_embed {
+            height: 100% !important;
+            width: 100% !important;
+            display: block !important;
+        }
+
+        .overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 15px 40px 15px;
+            background: linear-gradient(transparent, rgba(12, 12, 18, 0.95));
+            color: white;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+        }
+
+        .reel-info { flex: 1; padding-right: 10px; }
+        .reel-info b { font-size: 18px; display: block; margin-bottom: 15px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); font-weight: 500; }
+
+        .find-btn {
+            background: linear-gradient(45deg, #9d5df1, #cc3efd);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            pointer-events: auto;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(157, 93, 241, 0.4);
+            transition: 0.3s;
+        }
+        .find-btn:active { transform: scale(0.95); opacity: 0.9; }
+
+        .side-btns { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 25px; 
+            pointer-events: auto; 
+            margin-bottom: 15px;
+        }
+        .btn { 
+            font-size: 32px; 
+            text-align: center; 
+            cursor: pointer; 
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5); 
+            transition: 0.2s;
+        }
+        .btn:active { transform: scale(0.8); color: #9d5df1; }
+        .btn span { font-size: 11px; display: block; margin-top: 4px; font-weight: 400; color: #eee; }
+        
+        .reel::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(0deg, rgba(0,0,0,0.2) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.2) 100%);
+            pointer-events: none;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body>
+
+<div class="reels-container" id="reels-wrapper">
+</div>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const SHORTS_DATA_URL = "https://raw.githubusercontent.com/UPL-ANIME/annn/main/short.json";
+    const DB_URL = "https://meteoranimbaze-default-rtdb.firebaseio.com/mytube"; 
+    const USER_ID = tg.initDataUnsafe?.user?.id || "guest";
+    
+    let shortsData = [];
+    let watchedShorts = [];
+    let loadedCount = 0;
+    const wrapper = document.getElementById('reels-wrapper');
+
+    async function fetchWatchedFromFirebase() {
+        try {
+            const res = await fetch(`${DB_URL}/watched_shorts/${USER_ID}.json`);
+            const data = await res.json();
+            return data ? Object.keys(data) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    async function markAsWatchedFirebase(mediaId) {
+        if (!watchedShorts.includes(mediaId)) {
+            watchedShorts.push(mediaId);
+            try {
+                await fetch(`${DB_URL}/watched_shorts/${USER_ID}/${mediaId}.json`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ watchedAt: new Date().getTime() })
+                });
+            } catch (e) { console.error("Save error", e); }
+        }
+    }
+
+    async function loadShortsData() {
+        try {
+            watchedShorts = await fetchWatchedFromFirebase();
+            const res = await fetch(SHORTS_DATA_URL + "?v=" + new Date().getTime());
+            let rawData = await res.json();
+            
+            let filtered = rawData.filter(item => !watchedShorts.includes(item.link));
+
+            if (filtered.length === 0) {
+                // Hamma ko'rib bo'lingan bo'lsa, Firebase'dan ushbu user tarixini tozalash (ixtiyoriy)
+                // Yoki shunchaki hammasini qayta ko'rsatish:
+                filtered = rawData;
+                // Tarixni tozalash uchun: fetch(`${DB_URL}/watched_shorts/${USER_ID}.json`, { method: 'DELETE' });
+            }
+
+            shortsData = filtered;
+            shortsData.sort(() => Math.random() - 0.5);
+            
+            loadMore();
+            setTimeout(() => {
+                manageVideos();
+            }, 1000);
+        } catch (e) {
+            console.error("Ma'lumot yuklashda xato:", e);
+        }
+    }
+
+    function createReel(item) {
+        const reelDiv = document.createElement('div');
+        reelDiv.className = 'reel';
+        reelDiv.setAttribute('data-id', item.link);
+        
+        const mediaId = item.link; 
+        const onaId = item.ona;    
+
+        reelDiv.innerHTML = `
+            <div class="wistia_responsive_padding">
+                <div class="wistia_responsive_wrapper">
+                    <div class="wistia_embed wistia_async_${mediaId} videoFoam=true" style="height:100%;width:100%"></div>
+                </div>
+            </div>
+            <div class="overlay">
+                <div class="reel-info">
+                    <b>${item.nom}</b>
+                    <div class="find-btn" onclick="searchInMain('${item.nom}', '${onaId}')">
+                        <i class="material-icons" style="font-size: 18px;">search</i> Saytdan topish
+                    </div>
+                </div>
+                <div class="side-btns">
+                    <div class="btn" onclick="toggleMute('${mediaId}')"><i class="material-icons">volume_up</i><span>Ovoz</span></div>
+                    <div class="btn" onclick="shareShort('${item.nom}')"><i class="material-icons">share</i><span>Ulashish</span></div>
+                </div>
+            </div>
+        `;
+        wrapper.appendChild(reelDiv);
+    }
+
+    function loadMore() {
+        const batch = shortsData.slice(loadedCount, loadedCount + 5);
+        batch.forEach(item => createReel(item));
+        loadedCount += batch.length;
+    }
+
+    function manageVideos() {
+        const reels = document.querySelectorAll('.reel');
+        reels.forEach(reel => {
+            const rect = reel.getBoundingClientRect();
+            const wistiaDiv = reel.querySelector('.wistia_embed');
+            if (!wistiaDiv) return;
+            
+            const mediaId = reel.getAttribute('data-id');
+
+            window._wq = window._wq || [];
+            _wq.push({ id: mediaId, onReady: function(video) {
+                if (rect.top >= -50 && rect.top < window.innerHeight / 2) {
+                    video.play();
+                    // 2 soniya davomida ko'rilsa ko'rildi deb hisoblanadi
+                    setTimeout(() => {
+                        if (video.state() === "playing") {
+                            markAsWatchedFirebase(mediaId);
+                        }
+                    }, 2000);
+                } else {
+                    video.pause();
+                }
+            }});
+        });
+    }
+
+    function toggleMute(mediaId) {
+        window._wq = window._wq || [];
+        _wq.push({ id: mediaId, onReady: function(video) {
+            video.isMuted() ? video.unmute() : video.mute();
+        }});
+    }
+
+    function searchInMain(animeName, onaId) {
+        window.parent.postMessage({
+            type: "OPEN_ANIME_SEARCH",
+            name: animeName,
+            ona: onaId
+        }, "*");
+    }
+
+    function shareShort(name) {
+        tg.shareExternalContent({ text: `AFNA-da ajoyib anime topdim: ${name}!` });
+    }
+
+    wrapper.addEventListener('scroll', () => {
+        manageVideos();
+        if (wrapper.scrollTop + wrapper.clientHeight >= wrapper.scrollHeight - 100) {
+            loadMore();
+        }
+    });
+
+    loadShortsData();
+</script>
+</body>
+</html>

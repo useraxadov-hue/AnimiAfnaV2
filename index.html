@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title id="siteTitle"></title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    /* PRELOADER STYLE */
+    #preloader {
+      position: fixed; inset: 0; background: #0a0a0a; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: space-around; height: 100vh; width: 100vw; overflow: hidden;
+      transition: opacity 0.5s ease;
+    }
+    .classic-brand { text-align: center; letter-spacing: 5px; width: 100%; }
+    .classic-brand h1 { font-size: clamp(20px, 7vw, 40px); font-weight: 300; margin: 0; color: #ffffff; opacity: 0.9; text-transform: uppercase; font-family: 'Poppins', sans-serif; }
+    .square-container { display: flex; justify-content: center; align-items: center; height: 120px; width: 100%; }
+    .loader-sq { position: relative; width: 80px; height: 80px; transform: rotate(45deg); }
+    .loader-square { position: absolute; width: 24px; height: 24px; margin: 2px; background: white; animation: square-anim 10s ease-in-out infinite both; }
+    @keyframes square-anim {
+      0%, 10.5%, 100% { left: 0; top: 0; }
+      12.5%, 23% { left: 28px; top: 0; }
+      25%, 35.5% { left: 56px; top: 0; }
+      37.5%, 48% { left: 56px; top: 28px; }
+      50%, 60.5% { left: 28px; top: 28px; }
+      62.5%, 73% { left: 28px; top: 56px; }
+      75%, 85.5% { left: 0; top: 56px; }
+      87.5%, 98% { left: 0; top: 28px; }
+    }
+    .loader-square:nth-child(1) { animation-delay: -1.42s; }
+    .loader-square:nth-child(2) { animation-delay: -2.85s; }
+    .loader-square:nth-child(3) { animation-delay: -4.28s; }
+    .loader-square:nth-child(4) { animation-delay: -5.71s; }
+    .loader-square:nth-child(5) { animation-delay: -7.14s; }
+    .loader-square:nth-child(6) { animation-delay: -8.57s; }
+    .loader-square:nth-child(7) { animation-delay: -10s; }
+    
+    .text-card { background-color: rgba(255, 255, 255, 0.03); padding: 12px 20px; border-radius: 12px; display: flex; align-items: center; justify-content: center; width: 90%; max-width: 350px; border: 1px solid rgba(255, 255, 255, 0.05); }
+    .text-loader { color: #7c7c7c; font-weight: 400; font-size: clamp(14px, 4vw, 18px); height: 26px; display: flex; align-items: center; overflow: hidden; white-space: nowrap; font-family: 'Poppins', sans-serif; }
+    .words { position: relative; margin-left: 8px; height: 26px; }
+    .word { display: block; height: 26px; line-height: 26px; color: #956afa; animation: cosmos_spin 12s cubic-bezier(0.76, 0, 0.24, 1) infinite; }
+    @keyframes cosmos_spin {
+      0%, 15% { transform: translateY(0); }
+      20%, 35% { transform: translateY(-26px); }
+      40%, 55% { transform: translateY(-52px); }
+      60%, 75% { transform: translateY(-78px); }
+      80%, 95% { transform: translateY(-104px); }
+      100% { transform: translateY(0); }
+    }
+
+    /* ASOSIY SAYT STYLES */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #0c0c12; color: #fff; overflow-x: hidden; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background-color: #0c0c12; position: sticky; top: 0; z-index: 1000; height: 60px; border-bottom: 1px solid #1a1a24; }
+    .logo { display: flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+    .logo strong { color: #cc3efd; font-size: 20px; text-transform: uppercase; }
+    .logo-img { width: 32px; height: 32px; border-radius: 50%; background: #A47CF3; margin-right: 8px; overflow: hidden; }
+    .logo-img img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .search-box { flex: 1; max-width: 600px; display: flex; margin: 0 10px; transition: 0.3s; position: relative; }
+    .search-box input { width: 100%; background: #161621; border: 1px solid #252533; color: #fff; padding: 8px 15px; border-radius: 12px; outline: none; font-size: 14px; }
+    .search-box button { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; color: #777; cursor: pointer; }
+
+    .user-profile { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(to right, #9d5df1, #cc3efd); padding: 2px; overflow: hidden; cursor: pointer; flex-shrink: 0; }
+    .user-profile img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+    .main-wrapper { display: flex; flex-direction: row; }
+    .sidebar { width: 240px; padding: 12px; height: calc(100vh - 60px); position: sticky; top: 60px; flex-shrink: 0; z-index: 1000; background: #0c0c12; }
+    .sidebar-item { display: flex; align-items: center; padding: 12px 15px; border-radius: 12px; cursor: pointer; margin-bottom: 5px; color: #9ca3af; transition: 0.2s; }
+    .sidebar-item i { margin-right: 15px; font-size: 24px; }
+    .sidebar-item:hover { background: #1a1a24; color: #fff; }
+    .sidebar-item.active { background: rgba(157, 93, 241, 0.1); color: #9d5df1; }
+
+    .content { flex: 1; padding: 15px; width: 100%; min-height: 100vh; }
+    .tags-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 15px; scrollbar-width: none; }
+    .tag { background: #161621; padding: 8px 16px; border-radius: 10px; cursor: pointer; white-space: nowrap; border: 1px solid #252533; color: #9ca3af; font-size: 13px; flex-shrink: 0; }
+    .tag.active { background: #9d5df1 !important; color: #fff !important; border-color: #9d5df1; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+    .card { cursor: pointer; transition: 0.3s; background: #161621; border-radius: 16px; overflow: hidden; width: 100%; border: 1px solid #1a1a24; }
+    .card:hover { border-color: #3a3a4d; transform: translateY(-3px); }
+    .thumb { width: 100%; aspect-ratio: 16/9; position: relative; background: #222; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .duration { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 6px; font-size: 11px; backdrop-filter: blur(4px); }
+    .info { padding: 12px; }
+    .info h3 { font-size: 15px; margin-bottom: 4px; line-height: 1.4; display: flex; align-items: center; gap: 5px; overflow: hidden; color: #fff; }
+    .mini-icon { height: 26px; width: auto; border-radius: 4px; vertical-align: middle; margin-left: 2px; }
+    .info p { font-size: 12px; color: #6b7280; text-transform: lowercase; }
+    
+    @media (max-width: 768px) {
+      .sidebar { position: fixed; bottom: 0; left: 0; top: auto; width: 100%; height: 65px; background: #0c0c12; flex-direction: row; justify-content: space-around; padding: 0; border-top: 1px solid #1a1a24; z-index: 2000; display: flex; }
+      .sidebar-item { flex-direction: column; padding: 8px; font-size: 10px; margin-bottom: 0; flex: 1; border-radius: 0; justify-content: center; }
+      .sidebar-item i { margin-right: 0; margin-bottom: 4px; font-size: 20px; }
+      .content { padding: 10px; padding-bottom: 80px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    /* MODAL STYLE */
+    .modal { display: none; position: fixed; inset: 0; background: #0c0c12; z-index: 3000; overflow-y: auto; }
+    .modal-body { display: flex; flex-direction: column; max-width: 1000px; margin: 0 auto; padding: 15px; gap: 15px; position: relative; }
+    .poster-container { width: 100%; aspect-ratio: 16/9; position: relative; border-radius: 16px; overflow: hidden; background: #000; }
+    .poster-container img { width: 100%; height: 100%; object-fit: cover; }
+    .play-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #9d5df1; color: white; border: none; padding: 12px 30px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: bold; box-shadow: 0 4px 15px rgba(157, 93, 241, 0.4); }
+    .qism-item { display: flex; gap: 12px; padding: 12px; border-radius: 12px; cursor: pointer; margin-bottom: 8px; background: #161621; border: 1px solid transparent; transition: 0.2s; }
+    .qism-item:hover { background: #1a1a2b; }
+    .qism-item.active { background: rgba(157, 93, 241, 0.1); border-color: #9d5df1; }
+    .qism-thumb { width: 90px; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+    .qism-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .close-btn { position: absolute; top: 15px; right: 15px; font-size: 28px; cursor: pointer; z-index: 3100; color: #fff; background: rgba(255,255,255,0.1); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+    
+    .ai-container { text-align: center; max-width: 500px; margin: 40px auto; padding: 20px; }
+    .ai-btn { background: #9d5df1; color: white; padding: 15px 30px; border-radius: 14px; cursor: pointer; display: inline-block; margin-top: 20px; font-weight: bold; box-shadow: 0 4px 15px rgba(157, 93, 241, 0.3); }
+    .loader { border: 3px solid #161621; border-top: 3px solid #9d5df1; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* FULLSCREEN IFRAME STYLE */
+    .full-iframe-wrapper { position: fixed; left: 240px; top: 60px; right: 0; bottom: 0; background: #000; z-index: 500; overflow: hidden; display: none; }
+    .full-iframe-wrapper iframe { width: 100%; height: 100%; border: none; }
+    @media (max-width: 768px) {
+      .full-iframe-wrapper { left: 0; top: 60px; bottom: 65px; }
+    }
+
+    /* PREMIUM DESCRIPTION STYLE */
+    #vDescription {
+      background: #11111a;
+      border: 1px solid #1d1d2b;
+      border-left: 4px solid #9d5df1;
+      padding: 16px;
+      border-radius: 14px;
+      margin: 15px 0;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #cbd5e1;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      white-space: pre-line;
+    }
+    .info-label {
+      color: #9d5df1;
+      font-weight: 600;
+      display: inline-block;
+      min-width: 80px;
+    }
+  </style>
+</head>
+<body>
+<div id="preloader">
+    <div class="classic-brand"><h1 id="preloaderBrand">AFNA</h1></div>
+    <div class="square-container"><div class="loader-sq">
+        <div class="loader-square"></div><div class="loader-square"></div>
+        <div class="loader-square"></div><div class="loader-square"></div>
+        <div class="loader-square"></div><div class="loader-square"></div>
+        <div class="loader-square"></div>
+    </div></div>
+    <div class="text-card"><div class="text-loader">
+        <span id="prefixText">AFNA Bu:</span>
+        <div class="words">
+            <span class="word">ZO'R</span><span class="word">ARZON</span>
+            <span class="word">TEZLIK</span><span class="word">SIFAT</span>
+            <span class="word">SIZ NIMA DEB O'YLAYSIZ?</span>
+        </div>
+    </div></div>
+</div>
+
+<div id="shortsContainer" class="full-iframe-wrapper">
+    <iframe id="shortsFrame" src=""></iframe>
+</div>
+<div id="aiChatContainer" class="full-iframe-wrapper">
+    <iframe id="aiChatFrame" src=""></iframe>
+</div>
+<div id="animOvozContainer" class="full-iframe-wrapper">
+    <iframe id="animOvozFrame" src=""></iframe>
+</div>
+
+<header id="mainHeader">
+  <div class="logo" onclick="location.reload()">
+    <div class="logo-img"><img src="" id="siteLogo"></div>
+    <strong id="headerBrand">AFNA</strong>
+  </div>
+  <div class="search-box" id="searchContainer">
+    <input type="text" id="searchInput" placeholder="Anime qidirish..." onkeyup="handleSearch()">
+    <button><i class="material-icons">search</i></button>
+  </div>
+  <div class="user-profile" id="userPhoto"><img src="" id="pfp"></div>
+</header>
+
+<div class="main-wrapper">
+  <div class="sidebar">
+    <div class="sidebar-item active" id="btn-home" onclick="goHome()"><i class="material-icons">home</i> <span>Asosiy</span></div>
+    <div class="sidebar-item" id="btn-shorts" onclick="openShorts()"><i class="material-icons">play_circle_outline</i> <span>AniShorts</span></div>
+    <div class="sidebar-item" id="btn-ai-chat" onclick="openAIChat()"><i class="material-icons">smart_toy</i> <span>AI</span></div>
+    <div class="sidebar-item" id="btn-ai" onclick="openAISearch()"><i class="material-icons">image_search</i> <span>AI Qidiruv</span></div>
+    <div class="sidebar-item" id="btn-voice" onclick="openAnimOvoz()"><i class="material-icons">mic</i> <span>Anim Ovoz</span></div>
+    <div class="sidebar-item" id="btn-history" onclick="showHistory()"><i class="material-icons">history</i> <span>Tarix</span></div>
+  </div>
+
+  <div class="content">
+    <div class="tags-bar" id="tags">
+      <button class="tag active" onclick="filter('Yangi animelar')">Yangi animelar</button>
+      <button class="tag" onclick="filter('Mashhur')">Mashhur</button>
+      <button class="tag" onclick="filter('Sarguzasht')">Sarguzasht</button>
+      <button class="tag" onclick="filter('Fantaziya')">Fantaziya</button>
+      <button class="tag" onclick="filter('Romantika')">Romantika</button>
+      <button class="tag" onclick="filter('Drama')">Drama</button>
+      <button class="tag" onclick="filter('Komediya')">Komediya</button>
+      <button class="tag" onclick="filter('Isekai')">Isekai</button>
+      <button class="tag" onclick="filter('Psixologik')">Psixologik</button>
+      <button class="tag" onclick="filter('Horror')">Horror</button>
+      <button class="tag" onclick="filter('Hayotdan lavha')">Hayotdan lavha</button>
+      <button class="tag" onclick="filter('Sport')">Sport</button>
+      <button class="tag" onclick="filter('Magik')">Magik</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<div id="videoModal" class="modal">
+  <div class="modal-body">
+    <div class="close-btn" onclick="closeModal()"><i class="material-icons">close</i></div>
+    <div class="poster-container">
+      <img id="modalPoster" src="">
+      <button class="play-overlay" id="mainPlayBtn"><i class="material-icons">play_arrow</i> KO'RISH</button>
+    </div>
+    <div class="info">
+      <h2 id="vTitle" style="margin-bottom: 5px;"></h2>
+      
+      <!-- ENRICHED DESCRIPTION -->
+      <div id="vDescription"></div>
+
+      <h3 style="margin: 15px 0 10px; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+        <i class="material-icons" style="color:#9d5df1; font-size: 20px;">video_library</i> Qismlar
+      </h3>
+      <div id="playlistItems"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SETTINGS_URL = "https://raw.githubusercontent.com/UPL-ANIME/annn/main/wepset.json";
+  
+  async function loadSettings() {
+    try {
+        const response = await fetch(SETTINGS_URL);
+        const settings = await response.json();
+        document.getElementById('siteTitle').innerText = settings.name;
+        document.getElementById('preloaderBrand').innerText = settings.name;
+        document.getElementById('headerBrand').innerText = settings.name;
+        document.getElementById('prefixText').innerText = settings.name + " Bu:";
+        document.getElementById('siteLogo').src = settings.logo;
+        if(!document.getElementById('pfp').src || document.getElementById('pfp').src.includes('undefined')) {
+            document.getElementById('pfp').src = settings.logo;
+        }
+    } catch (e) { console.error("Settings error", e); }
+  }
+
+  window.addEventListener("message", function(event) {
+    if (event.data && event.data.type === "OPEN_ANIME_SEARCH") {
+        const animeId = event.data.ona; 
+        closeAllPanels();
+        openVideo(animeId);
+    }
+  });
+
+  const tg = window.Telegram.WebApp;
+  tg.expand();
+  if(tg.initDataUnsafe?.user?.photo_url) document.getElementById('pfp').src = tg.initDataUnsafe.user.photo_url;
+
+  const GITHUB_DATA_URL = "https://raw.githubusercontent.com/UPL-ANIME/annn/main/anim.json";
+  const SHORTS_DATA_URL = "https://raw.githubusercontent.com/UPL-ANIME/annn/main/short.json";
+  const DB_URL = "https://meteoranimbaze-default-rtdb.firebaseio.com/mytube";
+  const MY_MEMORY_URL = "https://api.mymemory.translated.net/get";
+  const IMGBB_API_KEY = "4370f5ebb3ad2302e03c1638b2ccb8c2";
+
+  let USER_IP = "guest", allData = [], shortsData = [], currentKey = null, currentMode = "home";
+
+  async function loadData() {
+    await loadSettings();
+    try {
+      const [ipRes, gitRes, viewRes, shortRes] = await Promise.all([
+        fetch('https://api.ipify.org?format=json').then(r => r.json()).catch(() => ({ip: 'guest'})),
+        fetch(GITHUB_DATA_URL).then(r => r.text()),
+        fetch(`${DB_URL}/views.json`).then(r => r.json()).catch(() => ({})),
+        fetch(SHORTS_DATA_URL).then(r => r.json()).catch(() => [])
+      ]);
+      USER_IP = ipRes.ip.replace(/\./g, '_');
+      allData = JSON.parse(gitRes);
+      shortsData = shortRes;
+      const views = viewRes || {};
+      allData = allData.map(item => ({ ...item, view: views[item.id] || 0 }));
+      render([...allData].reverse());
+      const startParam = tg.initDataUnsafe?.start_param;
+      if(startParam) setTimeout(() => openVideo(startParam), 500);
+      setTimeout(() => {
+        document.getElementById('preloader').style.opacity = '0';
+        setTimeout(() => document.getElementById('preloader').style.display = 'none', 500);
+      }, 1000);
+    } catch (e) { document.getElementById('grid').innerHTML = 'Xato!'; }
+  }
+
+  function render(list) {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = list.map(item => {
+      let displayTitle = item.title, miniImg = "";
+      if(item.title.includes(',{') && item.title.includes('}')) {
+        const parts = item.title.split(',{');
+        displayTitle = parts[0];
+        const rawLink = parts[1].replace('}', '').trim();
+        miniImg = `<img src="${rawLink}" class="mini-icon">`;
+      }
+      return `
+        <div class="card" onclick="openVideo('${item.id}')">
+          <div class="thumb">
+            <img src="${item.thumb}" loading="lazy">
+            <div class="duration">${item.view || 0} ko'rish</div>
+          </div>
+          <div class="info">
+            <h3>${displayTitle}${miniImg}</h3>
+            <p>${item.turkum?.join(', ') || 'Anime'}</p>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function closeAllPanels() {
+    ['shorts', 'aiChat', 'animOvoz'].forEach(p => {
+        document.getElementById(p + 'Container').style.display = 'none';
+        document.getElementById(p + 'Frame').src = "";
+    });
+  }
+
+  function openShorts() { closeAllPanels(); currentMode = "shorts"; updateUI('btn-shorts'); document.getElementById('shortsFrame').src = "shorts.html"; document.getElementById('shortsContainer').style.display = 'block'; }
+  function openAIChat() { closeAllPanels(); currentMode = "ai-chat"; updateUI('btn-ai-chat'); document.getElementById('aiChatFrame').src = "ai.html"; document.getElementById('aiChatContainer').style.display = 'block'; }
+  function openAnimOvoz() { closeAllPanels(); currentMode = "voice"; updateUI('btn-voice'); document.getElementById('animOvozFrame').src = "ovoz.html"; document.getElementById('animOvozContainer').style.display = 'block'; }
+
+  function filter(tag) {
+    document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+    if(event) event.target.classList.add('active');
+    if (tag === 'Yangi animelar') render([...allData].reverse());
+    else if (tag === 'Mashhur') render([...allData].sort((a, b) => (b.view || 0) - (a.view || 0)));
+    else render(allData.filter(i => i.turkum && i.turkum.includes(tag)));
+  }
+
+  async function openVideo(key) {
+    const item = allData.find(x => x.id === key);
+    if (!item) return;
+    currentKey = key;
+    document.getElementById('modalPoster').src = item.thumb;
+    let modalTitle = item.title;
+    if(item.title.includes(',{')) modalTitle = item.title.split(',{')[0];
+    document.getElementById('vTitle').innerText = modalTitle;
+
+    const descBox = document.getElementById('vDescription');
+    if(item.fullnews) {
+        let formatted = item.fullnews
+            .replace(/➤/g, '<span style="color:#9d5df1; margin-right:5px;">➤</span>')
+            .replace(/🌍 Davlati:/g, '<span class="info-label">🌍 Davlati:</span>')
+            .replace(/📆 Chiqqan yili:/g, '<span class="info-label">📆 Yili:</span>')
+            .replace(/🎞 Janrlar:/g, '<span class="info-label">🎞 Janrlar:</span>')
+            .replace(/📝 Voqealar:/g, '<br><span class="info-label" style="display:block; margin-top:10px;">📝 Syujet:</span>');
+        
+        descBox.innerHTML = formatted;
+        descBox.style.display = 'block';
+    } else { descBox.style.display = 'none'; }
+
+    document.getElementById('playlistItems').innerHTML = (item.qismlar || []).map((q, i) => {
+      const pThumb = q.thumb || item.thumb;
+      return `
+        <div class="qism-item" id="q-${i}" onclick="setPart('${btoa(encodeURIComponent(q.link))}', '${btoa(encodeURIComponent(q.nom))}', 'q-${i}', '${btoa(encodeURIComponent(pThumb))}')">
+          <div class="qism-thumb"><img src="${pThumb}"></div>
+          <div class="qism-info"><h4>${q.nom}</h4><span>Qism ${i+1}</span></div>
+        </div>`;
+    }).join('');
+
+    if(item.qismlar?.length) {
+      const f = item.qismlar[0];
+      setPart(btoa(encodeURIComponent(f.link)), btoa(encodeURIComponent(f.nom)), 'q-0', btoa(encodeURIComponent(f.thumb || item.thumb)));
+    }
+    document.getElementById('videoModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function setPart(sL, sN, id, sT) {
+    const link = decodeURIComponent(atob(sL)), nom = decodeURIComponent(atob(sN)), thumb = decodeURIComponent(atob(sT));
+    document.querySelectorAll('.qism-item').forEach(el => el.classList.remove('active'));
+    document.getElementById(id)?.classList.add('active');
+    document.getElementById('vTitle').innerText = nom;
+    document.getElementById('modalPoster').src = thumb;
+    document.getElementById('mainPlayBtn').onclick = () => {
+      const item = allData.find(x => x.id === currentKey);
+      if(item) {
+        item.view = (item.view || 0) + 1;
+        fetch(`${DB_URL}/views/${currentKey}.json`, { method: 'PUT', body: JSON.stringify(item.view) });
+      }
+      const plat = tg.platform;
+      if (plat === "desktop" || plat === "macos" || plat === "web") tg.openTelegramLink(link);
+      else window.open(link, "_blank");
+      let histTitle = item.title;
+      if(item.title.includes(',{')) histTitle = item.title.split(',{')[0];
+      fetch(`${DB_URL}/history/${USER_IP}/${currentKey}.json`, { method: 'PUT', body: JSON.stringify({ key: currentKey, title: histTitle, thumb: item.thumb, time: Date.now(), type: 'anime' }) });
+    };
+  }
+
+  async function showHistory() {
+    closeAllPanels(); currentMode = "history"; updateUI('btn-history');
+    const grid = document.getElementById('grid'); grid.innerHTML = '<div class="loader" style="display:block"></div>';
+    try {
+      const [histRes, shortHistRes] = await Promise.all([
+          fetch(`${DB_URL}/history/${USER_IP}.json`),
+          fetch(`${DB_URL}/watched_shorts/${USER_IP}.json`)
+      ]);
+      const histData = await histRes.json();
+      const shortHistData = await shortHistRes.json();
+      
+      let html = "";
+      
+      // Animelar Tarixi
+      const animeList = histData ? Object.values(histData).sort((a,b) => b.time - a.time) : [];
+      html += `<h2 style="grid-column: 1/-1; margin: 10px 0; color:#9d5df1;">Ko'rilgan animelar</h2>`;
+      if(animeList.length === 0) html += '<p style="grid-column: 1/-1; padding:10px; color:#aaa;">Animelar tarixi bo\'sh</p>';
+      else html += animeList.map(item => `
+        <div class="card" onclick="openVideo('${item.key}')">
+          <div class="thumb"><img src="${item.thumb}"></div>
+          <div class="info"><h3>${item.title}</h3><p>Ko'rilgan</p></div>
+        </div>`).join('');
+
+      // Shorts Tarixi
+      const shortIDs = shortHistData ? Object.keys(shortHistData) : [];
+      html += `<h2 style="grid-column: 1/-1; margin: 30px 0 10px; color:#cc3efd;">Ko'rilgan AniShorts</h2>`;
+      if(shortIDs.length === 0) html += '<p style="grid-column: 1/-1; padding:10px; color:#aaa;">Shorts tarixi bo\'sh</p>';
+      else {
+          // Shorts ma'lumotlarini JSON-dan qidirib topish
+          const watchedShorts = shortsData.filter(s => shortIDs.includes(s.link));
+          html += watchedShorts.map(item => `
+            <div class="card" onclick="openShorts()">
+              <div class="thumb" style="aspect-ratio: 9/16; max-height: 250px;">
+                <img src="https://embed-ssl.wistia.com/deliveries/${item.link}.jpg?video_still_time=1">
+              </div>
+              <div class="info"><h3>${item.nom}</h3><p>AniShorts</p></div>
+            </div>`).join('');
+      }
+      
+      grid.innerHTML = html;
+    } catch (e) { console.error(e); grid.innerHTML = 'Xato!'; }
+  }
+
+  function openAISearch() { closeAllPanels(); currentMode = "ai"; updateUI('btn-ai'); document.getElementById('grid').innerHTML = `<div class="ai-container"><h2>AI Qidiruv</h2><label class="ai-btn" for="fileInput">Rasm tanlash</label><input type="file" id="fileInput" accept="image/*" style="display:none" onchange="processAI(event)"><div class="loader" id="aiLoader"></div><div id="aiResult" style="margin-top:20px;"></div></div>`; }
+
+  async function processAI(e) {
+    const file = e.target.files[0]; if(!file) return;
+    const l = document.getElementById('aiLoader'), r = document.getElementById('aiResult');
+    l.style.display = 'block'; r.innerHTML = '';
+    try {
+      const fd = new FormData(); fd.append("image", file);
+      const imgR = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: fd });
+      const imgJ = await imgR.json();
+      const tR = await fetch(`https://api.trace.moe/search?url=${encodeURIComponent(imgJ.data.url)}`);
+      const tJ = await tR.json();
+      const anime = tJ.result[0];
+      const rawTitle = anime.filename.replace(/\[.*?\]|\.mp4|\.mkv|\d+|\(.*?\)|_/g, ' ').trim();
+      const uzTitle = await translate(rawTitle);
+      l.style.display = 'none';
+      r.innerHTML = `<div class="card" style="margin:auto; background:#161621; max-width:400px;"><img src="${anime.image}" style="width:100%"><div class="info"><h3 style="color:#A47CF3">${uzTitle}</h3><button class="tag active" style="width:100%;" onclick="goHomeSearch('${rawTitle}')">Saytdan topish</button></div></div>`;
+    } catch { l.style.display = 'none'; r.innerHTML = "Xato!"; }
+  }
+
+  async function translate(text) { try { const r = await fetch(`${MY_MEMORY_URL}?q=${encodeURIComponent(text)}&langpair=en|uz`); const d = await r.json(); return d.responseData?.translatedText || text; } catch { return text; } }
+
+  function updateUI(activeId) {
+    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+    document.getElementById(activeId).classList.add('active');
+    const s = document.getElementById('searchContainer'), t = document.getElementById('tags');
+    if (activeId === 'btn-home') { if(s) s.style.display = 'flex'; if(t) t.style.display = 'flex'; } else { if(s) s.style.display = 'none'; if(t) t.style.display = 'none'; }
+  }
+
+  function goHomeSearch(t) { goHome(); document.getElementById('searchInput').value = t; handleSearch(); }
+  function goHome() { closeAllPanels(); currentMode = "home"; updateUI('btn-home'); render([...allData].reverse()); }
+  function handleSearch() { const v = document.getElementById('searchInput').value.toLowerCase(); render(allData.filter(i => i.title.toLowerCase().includes(v))); }
+  function closeModal() { document.getElementById('videoModal').style.display = 'none'; document.body.style.overflow = 'auto'; }
+
+  loadData();
+</script>
+</body>
+</html>
