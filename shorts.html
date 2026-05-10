@@ -21,7 +21,6 @@
             scrollbar-width: none;
             background: #000;
             scroll-behavior: smooth;
-            /* Videolar tepaga chiqib ketmasligi uchun */
             -webkit-overflow-scrolling: touch;
         }
         .reels-container::-webkit-scrollbar { display: none; }
@@ -37,11 +36,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Fix: Har bir blok ekranni to'liq egallashi shart */
             flex-shrink: 0;
         }
 
-        /* Wistia konteynerini to'liq ekranga yoyish */
         .wistia_responsive_padding {
             padding: 0 !important;
             height: 100% !important;
@@ -49,6 +46,10 @@
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
+            /* Past sifatli videolarni markazda saqlash */
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
         }
         .wistia_responsive_wrapper {
             height: 100% !important;
@@ -61,7 +62,12 @@
             height: 100% !important;
             width: 100% !important;
             display: block !important;
+            /* Video rezolyutsiyasi past bo'lsa, o'rtada (X:0, Y:0) ijro etiladi */
+            object-fit: contain !important;
         }
+
+        /* Wistia pleyer boshqaruvlarini yashirish */
+        .w-vulcan-v2 .w-control-bar, .w-vulcan-v2 .w-big-play-button { display: none !important; }
 
         .overlay {
             position: absolute;
@@ -69,7 +75,7 @@
             left: 0;
             right: 0;
             padding: 20px 15px 40px 15px;
-            background: linear-gradient(transparent, rgba(12, 12, 18, 0.95));
+            background: linear-gradient(0deg, rgba(12, 12, 18, 0.95) 0%, transparent 100%);
             color: white;
             z-index: 100;
             display: flex;
@@ -220,7 +226,7 @@
         reelDiv.innerHTML = `
             <div class="wistia_responsive_padding">
                 <div class="wistia_responsive_wrapper">
-                    <div class="wistia_embed wistia_async_${item.link} videoFoam=true" style="height:100%;width:100%"></div>
+                    <div class="wistia_embed wistia_async_${item.link} videoFoam=true controlsVisibleOnLoad=false playbar=false settingsControl=false smallPlayButton=false volumeControl=false fullscreenButton=false" style="height:100%;width:100%"></div>
                 </div>
             </div>
             <div class="overlay">
@@ -315,16 +321,8 @@
 
         reels.forEach(reel => {
             const rect = reel.getBoundingClientRect();
-            /* Fix: Markazni aniqlashni aniqlashtirish */
-            if (rect.top >= -10 && rect.top <= 10) activeReel = reel;
+            if (rect.top >= -window.innerHeight / 2 && rect.top <= window.innerHeight / 2) activeReel = reel;
         });
-
-        if(!activeReel) {
-            reels.forEach(reel => {
-                const rect = reel.getBoundingClientRect();
-                if (rect.top >= -window.innerHeight / 2 && rect.top <= window.innerHeight / 2) activeReel = reel;
-            });
-        }
 
         reels.forEach(reel => {
             const mediaId = reel.getAttribute('data-id');
@@ -342,6 +340,7 @@
                 }
                 _wq.push({ id: mediaId, onReady: function(v) { 
                     v.play(); 
+                    v.videoQuality('720p');
                     setTimeout(() => { if (v.state() === "playing") markAsWatchedFirebase(mediaId); }, 2000);
                 }});
             } else {
