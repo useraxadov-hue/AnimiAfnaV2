@@ -20,6 +20,9 @@
             scroll-snap-type: y mandatory;
             scrollbar-width: none;
             background: #000;
+            scroll-behavior: smooth;
+            /* Videolar tepaga chiqib ketmasligi uchun */
+            -webkit-overflow-scrolling: touch;
         }
         .reels-container::-webkit-scrollbar { display: none; }
 
@@ -28,11 +31,14 @@
             height: 100vh;
             position: relative;
             scroll-snap-align: start;
+            scroll-snap-stop: always; 
             overflow: hidden;
             background: #000;
             display: flex;
             justify-content: center;
             align-items: center;
+            /* Fix: Har bir blok ekranni to'liq egallashi shart */
+            flex-shrink: 0;
         }
 
         /* Wistia konteynerini to'liq ekranga yoyish */
@@ -73,8 +79,8 @@
         }
 
         .reel-info { flex: 1; padding-right: 10px; }
-        .reel-info b { font-size: 18px; display: block; margin-bottom: 15px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); font-weight: 500; }
-
+        .reel-info b { font-size: 18px; display: block; margin-bottom: 5px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); font-weight: 500; }
+        
         .find-btn {
             background: linear-gradient(45deg, #9d5df1, #cc3efd);
             color: white;
@@ -83,8 +89,7 @@
             font-size: 13px;
             font-weight: bold;
             display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            align-items: center; gap: 8px;
             pointer-events: auto;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(157, 93, 241, 0.4);
@@ -95,21 +100,42 @@
         .side-btns { 
             display: flex; 
             flex-direction: column; 
-            gap: 25px; 
+            gap: 20px; 
             pointer-events: auto; 
             margin-bottom: 15px;
+            align-items: center;
         }
         .btn { 
-            font-size: 32px; 
+            font-size: 30px; 
             text-align: center; 
             cursor: pointer; 
             color: #fff;
             text-shadow: 0 2px 10px rgba(0,0,0,0.5); 
             transition: 0.2s;
         }
-        .btn:active { transform: scale(0.8); color: #9d5df1; }
-        .btn span { font-size: 11px; display: block; margin-top: 4px; font-weight: 400; color: #eee; }
+        .btn:active { transform: scale(0.8); }
+        .btn.liked { color: #ff3b5c; }
+        .btn span { font-size: 11px; display: block; margin-top: 2px; font-weight: 400; color: #eee; }
         
+        #comment-modal {
+            position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%;
+            background: #16161e; z-index: 1000; border-radius: 20px 20px 0 0;
+            transition: 0.4s; padding: 20px; display: flex; flex-direction: column;
+        }
+        #comment-modal.active { bottom: 0; }
+        .comment-header { display: flex; justify-content: space-between; color: white; margin-bottom: 15px; }
+        .comment-list { flex: 1; overflow-y: auto; color: #ccc; }
+        
+        .comment-item { display: flex; gap: 12px; margin-bottom: 16px; align-items: flex-start; }
+        .comment-item img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+        .comment-content { display: flex; flex-direction: column; }
+        .comment-author { font-size: 13px; font-weight: bold; color: #fff; margin-bottom: 2px; }
+        .comment-text { font-size: 14px; color: #eee; line-height: 1.4; word-break: break-word; }
+
+        .comment-input { display: flex; gap: 10px; margin-top: 10px; padding-bottom: 10px;}
+        .comment-input input { flex: 1; background: #252530; color: white; padding: 12px; border-radius: 10px; font-size: 14px; }
+        .comment-input button { background: #9d5df1; color: white; padding: 10px 15px; border-radius: 10px; display: flex; align-items: center; }
+
         .reel::after {
             content: '';
             position: absolute;
@@ -122,41 +148,55 @@
 </head>
 <body>
 
-<div class="reels-container" id="reels-wrapper">
+<div class="reels-container" id="reels-wrapper"></div>
+
+<div id="comment-modal">
+    <div class="comment-header">
+        <b>Izohlar</b>
+        <i class="material-icons" onclick="closeComments()" style="cursor:pointer">close</i>
+    </div>
+    <div class="comment-list" id="comment-list"></div>
+    <div class="comment-input">
+        <input type="text" id="c-input" placeholder="Izoh qoldiring..." maxlength="500">
+        <button onclick="sendComment()"><i class="material-icons">send</i></button>
+    </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
+    const USER_NAME = tg.initDataUnsafe?.user?.first_name || "Foydalanuvchi";
+    const USER_PHOTO = tg.initDataUnsafe?.user?.photo_url || "https://ui-avatars.com/api/?background=9d5df1&color=fff&name=" + USER_NAME;
+    const USER_ID = tg.initDataUnsafe?.user?.id || "guest";
+
     const SHORTS_DATA_URL = "https://raw.githubusercontent.com/UPL-ANIME/annn/main/short.json";
     const DB_URL = "https://meteoranimbaze-default-rtdb.firebaseio.com/mytube"; 
-    const USER_ID = tg.initDataUnsafe?.user?.id || "guest";
     
     let shortsData = [];
     let watchedShorts = [];
     let loadedCount = 0;
     const wrapper = document.getElementById('reels-wrapper');
 
+    let currentOnaId = null; 
+    let videoStartTime = 0;
+    let currentMediaId = null;
+
     async function fetchWatchedFromFirebase() {
         try {
             const res = await fetch(`${DB_URL}/watched_shorts/${USER_ID}.json`);
             const data = await res.json();
             return data ? Object.keys(data) : [];
-        } catch (e) {
-            return [];
-        }
+        } catch (e) { return []; }
     }
 
     async function markAsWatchedFirebase(mediaId) {
         if (!watchedShorts.includes(mediaId)) {
             watchedShorts.push(mediaId);
-            try {
-                await fetch(`${DB_URL}/watched_shorts/${USER_ID}/${mediaId}.json`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ watchedAt: new Date().getTime() })
-                });
-            } catch (e) { console.error("Save error", e); }
+            fetch(`${DB_URL}/watched_shorts/${USER_ID}/${mediaId}.json`, {
+                method: 'PUT',
+                body: JSON.stringify({ watchedAt: new Date().getTime() })
+            });
         }
     }
 
@@ -165,56 +205,101 @@
             watchedShorts = await fetchWatchedFromFirebase();
             const res = await fetch(SHORTS_DATA_URL + "?v=" + new Date().getTime());
             let rawData = await res.json();
-            
-            let filtered = rawData.filter(item => !watchedShorts.includes(item.link));
-
-            if (filtered.length === 0) {
-                // Hamma ko'rib bo'lingan bo'lsa, Firebase'dan ushbu user tarixini tozalash (ixtiyoriy)
-                // Yoki shunchaki hammasini qayta ko'rsatish:
-                filtered = rawData;
-                // Tarixni tozalash uchun: fetch(`${DB_URL}/watched_shorts/${USER_ID}.json`, { method: 'DELETE' });
-            }
-
-            shortsData = filtered;
-            shortsData.sort(() => Math.random() - 0.5);
-            
+            shortsData = [...rawData].reverse();
             loadMore();
-            setTimeout(() => {
-                manageVideos();
-            }, 1000);
-        } catch (e) {
-            console.error("Ma'lumot yuklashda xato:", e);
-        }
+            setTimeout(() => manageVideos(), 1000);
+        } catch (e) { console.error("Xato:", e); }
     }
 
     function createReel(item) {
         const reelDiv = document.createElement('div');
         reelDiv.className = 'reel';
         reelDiv.setAttribute('data-id', item.link);
+        reelDiv.setAttribute('data-ona', item.ona);
         
-        const mediaId = item.link; 
-        const onaId = item.ona;    
-
         reelDiv.innerHTML = `
             <div class="wistia_responsive_padding">
                 <div class="wistia_responsive_wrapper">
-                    <div class="wistia_embed wistia_async_${mediaId} videoFoam=true" style="height:100%;width:100%"></div>
+                    <div class="wistia_embed wistia_async_${item.link} videoFoam=true" style="height:100%;width:100%"></div>
                 </div>
             </div>
             <div class="overlay">
                 <div class="reel-info">
                     <b>${item.nom}</b>
-                    <div class="find-btn" onclick="searchInMain('${item.nom}', '${onaId}')">
+                    <div class="find-btn" onclick="searchInMain('${item.nom}', '${item.ona}')">
                         <i class="material-icons" style="font-size: 18px;">search</i> Saytdan topish
                     </div>
                 </div>
                 <div class="side-btns">
-                    <div class="btn" onclick="toggleMute('${mediaId}')"><i class="material-icons">volume_up</i><span>Ovoz</span></div>
+                    <div class="btn" id="like-${item.link}" onclick="toggleLike('${item.link}')"><i class="material-icons">favorite</i><span id="l-count-${item.link}">0</span></div>
+                    <div class="btn" onclick="openComments('${item.link}')"><i class="material-icons">comment</i><span>Izoh</span></div>
+                    <div class="btn" onclick="toggleMute('${item.link}')"><i class="material-icons">volume_up</i><span>Ovoz</span></div>
                     <div class="btn" onclick="shareShort('${item.nom}')"><i class="material-icons">share</i><span>Ulashish</span></div>
                 </div>
             </div>
         `;
         wrapper.appendChild(reelDiv);
+        loadLikes(item.link);
+    }
+
+    async function toggleLike(id) {
+        const btn = document.getElementById(`like-${id}`);
+        const isLiked = btn.classList.toggle('liked');
+        await fetch(`${DB_URL}/likes/${id}/${USER_ID}.json`, {
+            method: isLiked ? 'PUT' : 'DELETE',
+            body: isLiked ? JSON.stringify(true) : null
+        });
+        loadLikes(id);
+    }
+
+    async function loadLikes(id) {
+        const res = await fetch(`${DB_URL}/likes/${id}.json`);
+        const data = await res.json();
+        const count = data ? Object.keys(data).length : 0;
+        document.getElementById(`l-count-${id}`).innerText = count;
+        if (data && data[USER_ID]) document.getElementById(`like-${id}`).classList.add('liked');
+    }
+
+    function openComments(id) {
+        currentMediaId = id;
+        document.getElementById('comment-modal').classList.add('active');
+        loadComments(id);
+    }
+
+    function closeComments() { document.getElementById('comment-modal').classList.remove('active'); }
+
+    async function sendComment() {
+        const input = document.getElementById('c-input');
+        const text = input.value.trim();
+        const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
+        if (wordCount > 150) { alert("Izoh 150 ta so'zdan oshmasligi kerak!"); return; }
+        if (!text) return;
+        await fetch(`${DB_URL}/comments/${currentMediaId}.json`, {
+            method: 'POST',
+            body: JSON.stringify({ user: USER_NAME, text: text, photo: USER_PHOTO, time: new Date().getTime() })
+        });
+        input.value = "";
+        loadComments(currentMediaId);
+    }
+
+    async function loadComments(id) {
+        const res = await fetch(`${DB_URL}/comments/${id}.json`);
+        const data = await res.json();
+        const list = document.getElementById('comment-list');
+        list.innerHTML = "";
+        if (data) {
+            Object.values(data).forEach(c => {
+                list.innerHTML += `
+                    <div class="comment-item">
+                        <img src="${c.photo || 'https://ui-avatars.com/api/?name='+c.user}">
+                        <div class="comment-content">
+                            <span class="comment-author">${c.user}</span>
+                            <span class="comment-text">${c.text}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
     }
 
     function loadMore() {
@@ -225,43 +310,53 @@
 
     function manageVideos() {
         const reels = document.querySelectorAll('.reel');
+        const now = new Date().getTime();
+        let activeReel = null;
+
         reels.forEach(reel => {
             const rect = reel.getBoundingClientRect();
-            const wistiaDiv = reel.querySelector('.wistia_embed');
-            if (!wistiaDiv) return;
-            
-            const mediaId = reel.getAttribute('data-id');
+            /* Fix: Markazni aniqlashni aniqlashtirish */
+            if (rect.top >= -10 && rect.top <= 10) activeReel = reel;
+        });
 
+        if(!activeReel) {
+            reels.forEach(reel => {
+                const rect = reel.getBoundingClientRect();
+                if (rect.top >= -window.innerHeight / 2 && rect.top <= window.innerHeight / 2) activeReel = reel;
+            });
+        }
+
+        reels.forEach(reel => {
+            const mediaId = reel.getAttribute('data-id');
+            const onaId = reel.getAttribute('data-ona');
             window._wq = window._wq || [];
-            _wq.push({ id: mediaId, onReady: function(video) {
-                if (rect.top >= -50 && rect.top < window.innerHeight / 2) {
-                    video.play();
-                    // 2 soniya davomida ko'rilsa ko'rildi deb hisoblanadi
-                    setTimeout(() => {
-                        if (video.state() === "playing") {
-                            markAsWatchedFirebase(mediaId);
-                        }
-                    }, 2000);
-                } else {
-                    video.pause();
+            if (reel === activeReel) {
+                if (currentMediaId !== mediaId) {
+                    if (currentMediaId) {
+                        const duration = (now - videoStartTime) / 1000;
+                        if (duration > 5) currentOnaId = onaId;
+                        else if (duration < 2) currentOnaId = null;
+                    }
+                    videoStartTime = now;
+                    currentMediaId = mediaId;
                 }
-            }});
+                _wq.push({ id: mediaId, onReady: function(v) { 
+                    v.play(); 
+                    setTimeout(() => { if (v.state() === "playing") markAsWatchedFirebase(mediaId); }, 2000);
+                }});
+            } else {
+                _wq.push({ id: mediaId, onReady: function(v) { v.pause(); }});
+            }
         });
     }
 
-    function toggleMute(mediaId) {
+    function toggleMute(id) {
         window._wq = window._wq || [];
-        _wq.push({ id: mediaId, onReady: function(video) {
-            video.isMuted() ? video.unmute() : video.mute();
-        }});
+        _wq.push({ id: id, onReady: function(v) { v.isMuted() ? v.unmute() : v.mute(); }});
     }
 
     function searchInMain(animeName, onaId) {
-        window.parent.postMessage({
-            type: "OPEN_ANIME_SEARCH",
-            name: animeName,
-            ona: onaId
-        }, "*");
+        window.parent.postMessage({ type: "OPEN_ANIME_SEARCH", name: animeName, ona: onaId }, "*");
     }
 
     function shareShort(name) {
@@ -270,9 +365,7 @@
 
     wrapper.addEventListener('scroll', () => {
         manageVideos();
-        if (wrapper.scrollTop + wrapper.clientHeight >= wrapper.scrollHeight - 100) {
-            loadMore();
-        }
+        if (wrapper.scrollTop + wrapper.clientHeight >= wrapper.scrollHeight - 100) loadMore();
     });
 
     loadShortsData();
